@@ -1,4 +1,4 @@
-"""""
+"""
 /****************/
 Mã sinh viên: 202418930
 Họ tên: Dương Tùng Lâm
@@ -8,8 +8,6 @@ import gc
 import math
 import weakref
 from typing import List, Optional
-
-# Hàm tiện ích
 
 def _require_non_empty(value, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
@@ -85,7 +83,8 @@ class Employee:
               f"chi phí tháng: {_money(self.calculate_monthly_cost())}")
 
     def __del__(self):
-        print(f"   (hủy Employee {self._id} - {self._full_name})")
+        print(f"   (hủy Employee {getattr(self, '_id', '?')} - "
+              f"{getattr(self, '_full_name', '?')})")
 
 # Lớp SoftwareEngineer 
 
@@ -127,7 +126,8 @@ class SoftwareEngineer(Employee):
               f"chi phí tháng: {_money(self.calculate_monthly_cost())}")
 
     def __del__(self):
-        print(f"   (hủy SoftwareEngineer {self._id} - {self._full_name})")
+        print(f"   (hủy SoftwareEngineer {getattr(self, '_id', '?')} - "
+              f"{getattr(self, '_full_name', '?')})")
         super().__del__()
 
 # Lớp ProjectTeam 
@@ -135,10 +135,9 @@ class SoftwareEngineer(Employee):
 class ProjectTeam:
     def __init__(self, project_code: str, project_name: str,
                  leader: Optional[Employee] = None):
-        """ProjectTeam(code, name) / ProjectTeam(code, name, leader).
-        """
-        self._project_code = _normalize_text(project_code)
-        self._project_name = _normalize_text(project_name)
+        """ProjectTeam(code, name) / ProjectTeam(code, name, leader)."""
+        self._project_code = _require_non_empty(project_code, "Mã dự án")
+        self._project_name = _require_non_empty(project_name, "Tên dự án")
         self._leader: Optional[Employee] = None
         self._members: List[Employee] = []
         if leader is not None:
@@ -212,25 +211,14 @@ class ProjectTeam:
         print(f"Tổng chi phí tháng: {_money(self.calculate_total_monthly_cost())}")
 
     def __del__(self):
-        print(f"   (hủy ProjectTeam {self._project_code}; "
-              f"chỉ xóa danh sách liên kết, {len(self._members)} nhân sự vẫn còn)")
-        self._members.clear()
+        print(f"   (hủy ProjectTeam {getattr(self, '_project_code', '?')}; ")
+        getattr(self, '_members', []).clear()
         self._leader = None
 
 
 def check(label: str, condition: bool) -> None:
     print(f"   [{'OK' if condition else 'FAIL'}] {label}")
     assert condition, label
-
-
-def expect_error(label: str, func, *args) -> None:
-    try:
-        func(*args)
-    except (ValueError, TypeError) as ex:
-        print(f"   [OK] {label} -> bị từ chối: {ex}")
-    else:
-        print(f"   [FAIL] {label} -> lẽ ra phải lỗi")
-        raise AssertionError(label)
 
 
 def second_team_scope(shared: Employee, engineer: SoftwareEngineer):
@@ -243,8 +231,6 @@ def second_team_scope(shared: Employee, engineer: SoftwareEngineer):
     return weakref.ref(team_b)
 
 
-# Kiểm thử
-
 def _ask(prompt: str) -> str:
     return input(prompt).strip()
 
@@ -254,10 +240,6 @@ def _ask_required(prompt: str, field: str) -> str:
     if not value:
         raise ValueError(f"{field} không được rỗng")
     return value
-
-
-def _ask_text(prompt: str) -> str:
-    return _ask(prompt)
 
 
 def _ask_float(prompt: str) -> float:
@@ -287,7 +269,6 @@ def test() -> None:
         if e.id in employees:
             raise ValueError(f"Mã '{e.id}' đã tồn tại trong danh sách nhân sự")
         employees[e.id] = e
-        print("Đã tạo:", end=" ")
         e.display_info()
 
     def pick_employee(prompt: str = "Mã nhân sự: ") -> Employee:
@@ -297,15 +278,14 @@ def test() -> None:
         return employees[emp_id]
 
     def pick_team() -> ProjectTeam:
-        code = _ask_text("Mã dự án: ")
+        code = _ask_required("Mã dự án: ", "Mã dự án")
         if code not in teams:
             raise ValueError(f"Không có nhóm mã '{code}'")
         return teams[code]
 
     def create_employee() -> None:
-        print("  1) Employee()   2) Employee(id, name)   "
-              "3) Employee(id, name, salary)")
-        c = _ask("Chọn constructor: ")
+        print("1) Employee()  2) Employee(id, name)  3) Employee(id, name, salary)")
+        c = _ask("Chọn: ")
         if c == "1":
             register(Employee())
         elif c == "2":
@@ -319,9 +299,9 @@ def test() -> None:
             raise ValueError("Lựa chọn không hợp lệ")
 
     def create_engineer() -> None:
-        print("  1) SoftwareEngineer(id, name, language)")
-        print("  2) SoftwareEngineer(id, name, salary, language, allowance)")
-        c = _ask("Chọn constructor: ")
+        print("1) SoftwareEngineer(id, name, language)")
+        print("2) SoftwareEngineer(id, name, salary, language, allowance)")
+        c = _ask("Chọn: ")
         if c == "1":
             register(SoftwareEngineer(_ask_required("Mã: ", "Mã nhân sự"),
                                       _ask_required("Họ tên: ", "Họ tên nhân sự"),
@@ -340,9 +320,9 @@ def test() -> None:
 
     def raise_salary() -> None:
         e = pick_employee()
-        print("  1) increase_salary(amount)          - số tiền cố định")
+        print("1) increase_salary(amount)")
         print("  2) increase_salary(value, byPercentage)")
-        c = _ask("Chọn phiên bản: ")
+        c = _ask("Chọn: ")
         if c not in ("1", "2"):
             raise ValueError("Lựa chọn không hợp lệ")
         value = _ask_float("Giá trị tăng: ")
@@ -354,21 +334,25 @@ def test() -> None:
             if by_percentage not in ("true", "false"):
                 raise ValueError("byPercentage phải là true hoặc false")
             e.increase_salary(value, by_percentage == "true")
-        print(f"Lương cơ bản: {_money(before)} -> {_money(e.base_salary)}")
+        print(f"{_money(before)} -> {_money(e.base_salary)}")
 
     def list_employees() -> None:
         if not employees:
-            print("(chưa có nhân sự nào)")
+            print("(trống)")
         for e in employees.values():
             e.display_info()
 
+    def total_monthly_cost() -> None:
+        total = sum(e.calculate_monthly_cost() for e in employees.values())
+        print(_money(total))
+
     def create_team() -> None:
-        code = _ask_text("Mã dự án (có thể để trống): ")
-        name = _ask_text("Tên dự án (có thể để trống): ")
+        code = _ask_required("Mã dự án: ", "Mã dự án")
+        name = _ask_required("Tên dự án: ", "Tên dự án")
         if code in teams:
             raise ValueError(f"Mã dự án '{code}' đã tồn tại")
-        print("  1) Không có trưởng nhóm   2) Có trưởng nhóm")
-        c = _ask("Chọn constructor: ")
+        print("1) Không có trưởng nhóm  2) Có trưởng nhóm")
+        c = _ask("Chọn: ")
         if c == "1":
             teams[code] = ProjectTeam(code, name)
         elif c == "2":
@@ -376,27 +360,26 @@ def test() -> None:
                                       pick_employee("Mã trưởng nhóm: "))
         else:
             raise ValueError("Lựa chọn không hợp lệ")
-        print("Đã tạo nhóm.")
+        print("Đã tạo")
 
     def add_member() -> None:
         t, e = pick_team(), pick_employee()
-        print("  1) add_member(employee)   2) add_member(employee, True)")
-        c = _ask("Chọn phiên bản: ")
+        print("1) Thêm nhân sự  2) Thêm nhân sự và làm trưởng nhóm")
+        c = _ask("Chọn: ")
         if c not in ("1", "2"):
             raise ValueError("Lựa chọn không hợp lệ")
         ok = t.add_member(e) if c == "1" else t.add_member(e, True)
-        print("Thành công." if ok else "BỊ TỪ CHỐI (trùng nhân sự hoặc không hợp lệ).")
+        print("OK" if ok else "Từ chối")
 
     def remove_member() -> None:
         t = pick_team()
         ok = t.remove_member(_ask("Mã nhân sự cần xóa: "))
-        print("Đã xóa." if ok else
-              "BỊ TỪ CHỐI (không tồn tại, hoặc đang là trưởng nhóm).")
+        print("OK" if ok else "Từ chối")
 
     def change_leader() -> None:
         t, e = pick_team(), pick_employee("Mã trưởng nhóm mới: ")
         ok = t.change_leader(e)
-        print("Đã đổi trưởng nhóm." if ok else "BỊ TỪ CHỐI (trùng mã khác đối tượng).")
+        print("OK" if ok else "Từ chối")
 
     def check_contains() -> None:
         t = pick_team()
@@ -412,39 +395,39 @@ def test() -> None:
         ref = weakref.ref(teams[code])
         del teams[code]
         gc.collect()
-        print("Nhóm đã bị hủy." if ref() is None else
-              "Nhóm chưa bị hủy (còn tham chiếu khác).")
-        print(f"Số nhân sự vẫn còn tồn tại: {len(employees)}")
+        print("Bị hủy." if ref() is None else "Chưa hủy.")
+        print(f"Nhân sự: {len(employees)}")
         list_employees()
 
     actions = {
         "1": ("Tạo Employee", create_employee),
         "2": ("Tạo SoftwareEngineer", create_engineer),
         "3": ("Tăng lương", raise_salary),
-        "4": ("Hiển thị danh sách nhân sự (đa hình)", list_employees),
-        "5": ("Tạo nhóm dự án", create_team),
-        "6": ("Thêm thành viên (addMember)", add_member),
-        "7": ("Xóa thành viên (removeMember)", remove_member),
-        "8": ("Đổi trưởng nhóm (changeLeader)", change_leader),
-        "9": ("Kiểm tra nhân sự có trong nhóm (contains)", check_contains),
-        "10": ("Hiển thị nhóm + tổng chi phí tháng", show_team),
-        "11": ("Hủy nhóm (chứng minh nhân sự vẫn còn)", destroy_team),
+        "4": ("Danh sách nhân sự", list_employees),
+        "5": ("Tạo nhóm", create_team),
+        "6": ("Thêm thành viên", add_member),
+        "7": ("Xóa thành viên", remove_member),
+        "8": ("Đổi trưởng nhóm", change_leader),
+        "9": ("Kiểm tra trong nhóm", check_contains),
+        "10": ("Hiển thị nhóm", show_team),
+        "11": ("Hủy nhóm", destroy_team),
+        "12": ("Tổng chi phí tháng", total_monthly_cost),
     }
 
     while True:
-        print("\n========== MENU KIỂM THỬ ==========")
+        print("\n========== MENU ==========")
         for key, (label, _) in actions.items():
             print(f"{key:>3}. {label}")
         print("  0. Thoát")
         try:
-            choice = _ask("Chọn chức năng: ")
+            choice = _ask("Chọn: ")
         except (EOFError, KeyboardInterrupt):
             print()
             break
         if choice == "0":
             break
         if choice not in actions:
-            print("Lựa chọn không hợp lệ.")
+            print("Sai")
             continue
         try:
             actions[choice][1]()
